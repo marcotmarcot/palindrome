@@ -4,7 +4,7 @@
 #include <fstream>
 #include <iostream>
 #include <string>
-#include <unordered_map>
+#include <map>
 
 class Trie {
 public:
@@ -18,26 +18,24 @@ public:
   }
 
   bool final_ = false;
-  std::unordered_map<char, Trie> next_;
+  std::map<char, Trie> next_;
 };
 
-void TryPalindrome(const Trie& forward, const std::string& context, const std::string& infix, std::string::const_reverse_iterator begin, std::string::const_reverse_iterator end) {
+bool TryPalindrome(const Trie& root, const Trie& forward, const std::string& context, const std::string& infix, std::string::const_reverse_iterator begin, std::string::const_reverse_iterator end) {
   while (begin != end && *begin == ' ') {
     ++begin;
   }
   if (begin == end) {
     if (!forward.final_) {
-      return;
+      return false;
     }
     std::string reversed(context);
     std::reverse(reversed.begin(), reversed.end());
     std::cout << context << infix << reversed << std::endl;
-    return;
+    return true;
   }
   auto it = forward.next_.find(*begin);
-  if (it != forward.next_.end()) {
-    TryPalindrome(it->second, context, infix, begin + 1, end);
-  }
+  return it != forward.next_.end() && TryPalindrome(root, it->second, context, infix, begin + 1, end) || forward.final_ && infix.empty() && TryPalindrome(root, root, context, infix, begin, end);
 }
 
 int main() {
@@ -53,10 +51,10 @@ int main() {
   while (!todo.empty()) {
     auto [context, current] = todo.front();
     todo.pop_front();
-    TryPalindrome(*current, context, "", context.crbegin(), context.crend());
+    TryPalindrome(trie, *current, context, "", context.crbegin(), context.crend());
     for (const auto& fi : current->next_) {
       if (!context.empty() && context.back() != ' ') {
-	TryPalindrome(fi.second, context, {fi.first}, context.crbegin(), context.crend());
+	TryPalindrome(trie, fi.second, context, {fi.first}, context.crbegin(), context.crend());
       }
       context.push_back(fi.first);
       todo.push_back({context, &(fi.second)});

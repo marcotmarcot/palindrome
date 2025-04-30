@@ -21,7 +21,7 @@ public:
   std::map<char, Trie> next_;
 };
 
-bool TryPalindrome(const Trie& root, const Trie& current, const std::string& context, const std::string& infix, std::string::const_reverse_iterator begin, std::string::const_reverse_iterator end) {
+bool TryPalindrome(const Trie& root, const Trie& current, std::string& context, bool infix, std::string::const_reverse_iterator begin, std::string::const_reverse_iterator end) {
   while (begin != end && *begin == ' ') {
     ++begin;
   }
@@ -29,13 +29,25 @@ bool TryPalindrome(const Trie& root, const Trie& current, const std::string& con
     if (!current.final_) {
       return false;
     }
-    std::string reversed(context);
-    std::reverse(reversed.begin(), reversed.end());
-    std::cout << context << infix << reversed << std::endl;
+    std::cout << context << std::endl;
     return true;
   }
   auto it = current.next_.find(*begin);
-  return it != current.next_.end() && TryPalindrome(root, it->second, context, infix, begin + 1, end) || current.final_ && infix.empty() && TryPalindrome(root, root, context, infix, begin, end);
+  if (it != current.next_.end()) {
+    context.push_back(*begin);
+    bool found = TryPalindrome(root, it->second, context, infix, begin + 1, end);
+    context.pop_back();
+    if (found) {
+      return true;
+    }
+  }
+  if (!current.final_ || infix) {
+    return false;
+  }
+  context.push_back(' ');
+  bool found = TryPalindrome(root, root, context, infix, begin, end);
+  context.pop_back();
+  return found;
 }
 
 int main() {
@@ -51,12 +63,12 @@ int main() {
   while (!todo.empty()) {
     auto [context, current] = todo.front();
     todo.pop_front();
-    TryPalindrome(root, *current, context, "", context.crbegin(), context.crend());
+    TryPalindrome(root, *current, context, false, context.crbegin(), context.crend());
     for (const auto& it : current->next_) {
-      if (!context.empty() && context.back() != ' ') {
-	TryPalindrome(root, it.second, context, {it.first}, context.crbegin(), context.crend());
-      }
       context.push_back(it.first);
+      if (context.size() > 1 && *(context.crbegin() + 1) != ' ') {
+	TryPalindrome(root, it.second, context, true, context.crbegin() + 1, context.crend());
+      }
       todo.push_back({context, &(it.second)});
       context.pop_back();
     }
